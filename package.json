@@ -1,0 +1,33 @@
+{
+  "name": "pluto-app",
+  "version": "1.0.0",
+  "description": "Pluto AI Assistant",
+  "author": "Sashank Viswanatham",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.pluto.app",
+    "productName": "Pluto",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": "zip"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "renderer.js",
+      "package.json",
+      "node_modules/**"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "screenshot-desktop": "*"
+  }
+}

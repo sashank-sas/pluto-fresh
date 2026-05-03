@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pluto</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0a0a12;
+      color: white;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Setup screen */
+    .setup-screen {
+      position: fixed;
+      inset: 0;
+      background: #0a0a12;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      z-index: 9999;
+      gap: 16px;
+    }
+    .setup-screen.hidden { display: none; }
+    .setup-logo {
+      font-size: 52px;
+      animation: waggle 0.6s ease infinite alternate;
+    }
+    @keyframes waggle {
+      from { transform: translateY(-3px) rotate(-6deg); }
+      to   { transform: translateY(3px) rotate(6deg); }
+    }
+    .setup-title {
+      font-size: 22px; font-weight: 700; text-align: center;
+    }
+    .setup-sub {
+      font-size: 12px; color: rgba(255,255,255,0.4);
+      text-align: center; line-height: 1.6;
+    }
+    .setup-steps {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 14px; width: 100%;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .setup-step {
+      display: flex; gap: 10px; align-items: flex-start;
+      font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.5;
+    }
+    .step-num {
+      width: 20px; height: 20px;
+      background: rgba(139,92,246,0.3);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: #c4b5fd; flex-shrink: 0;
+    }
+    .setup-link { color: #a78bfa; text-decoration: none; font-weight: 600; cursor: pointer; }
+    .setup-input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: white; font-size: 13px;
+      font-family: 'Segoe UI', sans-serif; outline: none;
+    }
+    .setup-input:focus { border-color: rgba(139,92,246,0.6); }
+    .setup-input::placeholder { color: rgba(255,255,255,0.2); }
+    .setup-btn {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      border: none; border-radius: 12px;
+      color: white; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .setup-btn:hover { opacity: 0.85; }
+    .setup-error { font-size: 12px; color: #f87171; text-align: center; min-height: 16px; }
+    .setup-credit {
+      font-size: 11px; color: rgba(255,255,255,0.18);
+      text-align: center; margin-top: 4px;
+    }
+    .setup-credit strong { color: rgba(255,255,255,0.35); }
+
+    /* Dog tab */
+    .dog-tab {
+      position: fixed; left: 0; top: 50%;
+      transform: translateY(-50%);
+      width: 42px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px; cursor: pointer; z-index: 999;
+      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+      opacity: 0;
+    }
+    .dog-tab.peeking { opacity: 1; }
+    .dog-face {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: -4px 0 20px rgba(217,119,6,0.5);
+      animation: waggle 0.5s ease infinite alternate;
+    }
+    .dog-label { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #fcd34d; text-shadow: 0 0 8px rgba(217,119,6,0.8); }
+
+    /* Panel */
+    .panel {
+      width: 380px; height: 100vh;
+      background: #0a0a12;
+      border-left: 0.5px solid rgba(217,119,6,0.3);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+      margin-left: auto;
+    }
+    .panel.open { transform: translateX(0); }
+
+    .header {
+      padding: 14px 16px;
+      background: #111120;
+      border-bottom: 1px solid rgba(217,119,6,0.3);
+      display: flex; align-items: center; gap: 12px;
+      -webkit-app-region: drag; flex-shrink: 0;
+    }
+    .logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; -webkit-app-region: no-drag;
+    }
+    .header-text h1 { font-size: 16px; font-weight: 600; }
+    .header-text p { font-size: 10px; color: rgba(255,255,255,0.35); }
+    .header-actions { margin-left: auto; display: flex; gap: 4px; -webkit-app-region: no-drag; }
+    .hdr-btn {
+      background: none; border: none;
+      color: rgba(255,255,255,0.4); font-size: 16px;
+      cursor: pointer; padding: 4px 8px; border-radius: 6px;
+    }
+    .hdr-btn:hover { background: rgba(255,255,255,0.08); color: white; }
+
+    .status-bar {
+      padding: 5px 14px; font-size: 10px;
+      color: rgba(255,255,255,0.2);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .status-dot { width: 5px; height: 5px; border-radius: 50%; background: #34d399; }
+
+    .controls {
+      padding: 8px 14px;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
+    }
+    .chip {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 11px; color: rgba(255,255,255,0.55); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip.on { background: rgba(217,119,6,0.2); border-color: rgba(217,119,6,0.5); color: #fcd34d; }
+
+    .screen-btn {
+      margin: 10px 14px;
+      padding: 10px 14px;
+      background: rgba(217,119,6,0.08);
+      border: 1px solid rgba(217,119,6,0.3);
+      border-radius: 12px; color: #fcd34d;
+      font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      transition: all 0.15s; flex-shrink: 0;
+    }
+    .screen-btn:hover { background: rgba(217,119,6,0.15); }
+    .screen-btn.loading { opacity: 0.6; pointer-events: none; }
+    .screen-btn .btn-icon { font-size: 18px; }
+    .screen-btn .btn-text { display: flex; flex-direction: column; }
+    .screen-btn .btn-title { font-weight: 600; font-size: 13px; }
+    .screen-btn .btn-sub { font-size: 10px; color: rgba(252,211,77,0.5); margin-top: 1px; }
+
+    .screen-preview {
+      background: rgba(217,119,6,0.06);
+      border: 1px solid rgba(217,119,6,0.2);
+      border-radius: 12px; padding: 10px;
+      align-self: flex-start; max-width: 92%;
+      animation: fadeIn 0.2s ease;
+    }
+    .screen-preview img { width: 100%; border-radius: 8px; display: block; margin-bottom: 8px; }
+    .screen-preview-label { font-size: 10px; color: rgba(252,211,77,0.6); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+    .screen-prompt-row { display: flex; gap: 6px; margin-top: 8px; }
+    .screen-prompt-input {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px; padding: 7px 12px;
+      color: white; font-size: 12px;
+      font-family: 'Segoe UI', sans-serif; outline: none;
+    }
+    .screen-prompt-input::placeholder { color: rgba(255,255,255,0.25); }
+    .screen-send {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      border: none; color: white; font-size: 13px; cursor: pointer;
+    }
+
+    .chat-area {
+      flex: 1; overflow-y: auto; padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .chat-area::-webkit-scrollbar { width: 3px; }
+    .chat-area::-webkit-scrollbar-thumb { background: rgba(217,119,6,0.4); border-radius: 2px; }
+
+    .bubble {
+      padding: 10px 14px; border-radius: 12px;
+      font-size: 13px; line-height: 1.6;
+      max-width: 92%; animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .bubble.pluto {
+      background: rgba(217,119,6,0.1);
+      border: 1px solid rgba(217,119,6,0.25);
+      align-self: flex-start;
+    }
+    .bubble.user {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      align-self: flex-end; color: rgba(255,255,255,0.7);
+    }
+    .bubble img { max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; }
+
+    .typing { display: flex; gap: 4px; padding: 4px 0; }
+    .typing span {
+      width: 6px; height: 6px; background: #f59e0b;
+      border-radius: 50%; animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,80%,100% { transform: translateY(0); opacity: 0.4; }
+      40% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    .input-area {
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
+    }
+    .input-row { display: flex; gap: 8px; align-items: center; }
+    #userInput {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px; padding: 9px 14px;
+      color: white; font-size: 13px;
+      font-family: 'Segoe UI', sans-serif; outline: none;
+    }
+    #userInput:focus { border-color: rgba(217,119,6,0.5); }
+    #userInput::placeholder { color: rgba(255,255,255,0.25); }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.6); font-size: 16px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; flex-shrink: 0;
+    }
+    .icon-btn:hover { background: rgba(217,119,6,0.2); border-color: rgba(217,119,6,0.4); color: #fcd34d; }
+    .icon-btn.recording {
+      background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.6); color: #f87171;
+      animation: pulse-red 1s infinite;
+    }
+    @keyframes pulse-red {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+    }
+    .send-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      border: none; color: white; font-size: 16px; cursor: pointer; flex-shrink: 0;
+    }
+    .voice-status {
+      font-size: 11px; color: rgba(255,255,255,0.3);
+      text-align: center; min-height: 16px;
+    }
+    .voice-status.active { color: #fcd34d; }
+    .file-preview {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; padding: 6px 10px;
+      font-size: 11px; color: rgba(255,255,255,0.6);
+      display: none; align-items: center; gap: 8px;
+    }
+    .file-preview.show { display: flex; }
+    .file-preview-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-clear { cursor: pointer; color: rgba(255,255,255,0.3); font-size: 14px; }
+    .file-clear:hover { color: white; }
+  </style>
+</head>
+<body>
+
+  <!-- SETUP SCREEN -->
+  <div class="setup-screen" id="setupScreen">
+    <div class="setup-logo">🐕</div>
+    <div class="setup-title">Hey! I'm Pluto 🐾</div>
+    <div class="setup-sub">To get started you need a free Groq API key.<br>It only takes 2 minutes — and it's completely free!</div>
+
+    <div class="setup-steps">
+      <div class="setup-step">
+        <div class="step-num">1</div>
+        <div>Go to <span class="setup-link" onclick="openGroq()">console.groq.com</span> and sign up free</div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">2</div>
+        <div>Click <strong>API Keys</strong> → <strong>Create API Key</strong> → copy it</div>
+      </div>
+      <div class="setup-step">
+        <div class="step-num">3</div>
+        <div>Paste it below and you're good to go!</div>
+      </div>
+    </div>
+
+    <input class="setup-input" id="apiKeyInput" type="password" placeholder="Paste your Groq key here (gsk_...)" />
+    <div class="setup-error" id="setupError"></div>
+    <button class="setup-btn" onclick="saveApiKey()">🐾 Let's go!</button>
+    <div class="setup-credit">Made with ❤️ by <strong>Sashank Viswanatham</strong> · © 2026 Pluto</div>
+  </div>
+
+  <!-- DOG TAB -->
+  <div class="dog-tab" id="dogTab" onclick="toggleWindow()">
+    <div class="dog-face">🐕</div>
+    <div class="dog-label">PLUTO</div>
+  </div>
+
+  <!-- MAIN PANEL -->
+  <div class="panel" id="panel">
+    <div class="header">
+      <div class="logo">🐕</div>
+      <div class="header-text">
+        <h1>Pluto</h1>
+        <p>by Sashank Viswanatham</p>
+      </div>
+      <div class="header-actions">
+        <button class="hdr-btn" onclick="resetKey()" title="Change API key">⚙️</button>
+        <button class="hdr-btn" onclick="toggleWindow()">✕</button>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-dot"></div>
+      pluto is active · always ready
+    </div>
+
+    <div class="controls">
+      <div class="chip on" onclick="this.classList.toggle('on')">◉ On</div>
+      <div class="chip" onclick="this.classList.toggle('on')">◎ Mute</div>
+      <div class="chip" onclick="toggleAutoSpeak(this)">🔊 Auto-speak</div>
+      <div class="chip" onclick="cycleSpice(this)">Mild</div>
+      <div class="chip" onclick="cycleDiff(this)">Easy</div>
+    </div>
+
+    <div class="screen-btn" id="screenBtn" onclick="captureScreen()">
+      <div class="btn-icon">🖥️</div>
+      <div class="btn-text">
+        <div class="btn-title">My Screen</div>
+        <div class="btn-sub">Pluto looks at your screen and helps</div>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chat">
+      <div class="bubble pluto">Woof! 🐾 I'm Pluto — ask me anything, use your voice, upload files, or hit My Screen!</div>
+    </div>
+
+    <div class="input-area">
+      <div class="file-preview" id="filePreview">
+        <span id="filePreviewName" class="file-preview-name"></span>
+        <span class="file-clear" onclick="clearFile()">✕</span>
+      </div>
+      <div class="input-row">
+        <button class="icon-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+        <input type="file" id="fileInput" accept="image/*,.pdf,.txt,.doc,.docx" style="display:none" onchange="handleFile(event)" />
+        <input id="userInput" type="text" placeholder="ask pluto anything..." />
+        <button class="icon-btn" id="micBtn" onclick="toggleRecording()">🎤</button>
+        <button class="send-btn" onclick="sendMessage()">↑</button>
+      </div>
+      <div class="voice-status" id="voiceStatus"></div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer, shell } = require('electron')
+
+    let GROQ_API_KEY = ''
+    let panelOpen = false
+    let isRecording = false
+    let mediaRecorder = null
+    let audioChunks = []
+    let autoSpeak = false
+    let attachedFile = null
+    let attachedFileType = null
+    let lastScreenshot = null
+
+    // --- API Key ---
+    function loadApiKey() {
+      const saved = localStorage.getItem('pluto_groq_key')
+      if (saved && saved.startsWith('gsk_')) {
+        GROQ_API_KEY = saved
+        document.getElementById('setupScreen').classList.add('hidden')
+      }
+    }
+
+    function saveApiKey() {
+      const input = document.getElementById('apiKeyInput').value.trim()
+      const errorEl = document.getElementById('setupError')
+      if (!input.startsWith('gsk_')) {
+        errorEl.textContent = 'Groq keys start with gsk_ — check and try again!'
+        return
+      }
+      GROQ_API_KEY = input
+      localStorage.setItem('pluto_groq_key', input)
+      errorEl.textContent = ''
+      document.getElementById('setupScreen').classList.add('hidden')
+    }
+
+    function resetKey() {
+      localStorage.removeItem('pluto_groq_key')
+      GROQ_API_KEY = ''
+      document.getElementById('apiKeyInput').value = ''
+      document.getElementById('setupError').textContent = ''
+      document.getElementById('setupScreen').classList.remove('hidden')
+    }
+
+    function openGroq() {
+      shell.openExternal('https://console.groq.com')
+    }
+
+    loadApiKey()
+
+    // --- Panel toggle ---
+    ipcRenderer.on('peek', (event, show) => {
+      document.getElementById('dogTab').classList.toggle('peeking', show)
+    })
+
+    function toggleWindow() {
+      ipcRenderer.send('toggle-window')
+      panelOpen = !panelOpen
+      document.getElementById('panel').classList.toggle('open', panelOpen)
+      document.getElementById('dogTab').classList.remove('peeking')
+    }
+
+    // --- Controls ---
+    const spices = ['Mild','Medium','Spicy']
+    const diffs = ['Easy','Medium','Hard']
+    let spiceIdx = 0, diffIdx = 0
+
+    function cycleSpice(el) { spiceIdx=(spiceIdx+1)%spices.length; el.textContent=spices[spiceIdx]; el.classList.toggle('on',spiceIdx>0) }
+    function cycleDiff(el) { diffIdx=(diffIdx+1)%diffs.length; el.textContent=diffs[diffIdx]; el.classList.toggle('on',diffIdx>0) }
+    function toggleAutoSpeak(el) { autoSpeak=!autoSpeak; el.classList.toggle('on',autoSpeak) }
+
+    // --- Screenshot ---
+    async function captureScreen() {
+      const btn = document.getElementById('screenBtn')
+      btn.classList.add('loading')
+      btn.querySelector('.btn-sub').textContent = 'Taking screenshot...'
+      const result = await ipcRenderer.invoke('take-screenshot')
+      btn.classList.remove('loading')
+      btn.querySelector('.btn-sub').textContent = 'Pluto looks at your screen and helps'
+      if (!result.success) { addBubble('pluto','Could not take screenshot: '+result.error); return }
+      lastScreenshot = result.data
+      const chat = document.getElementById('chat')
+      const previewDiv = document.createElement('div')
+      previewDiv.className = 'screen-preview'
+      previewDiv.innerHTML = `
+        <div class="screen-preview-label">🖥️ your screen</div>
+        <img src="${lastScreenshot}" alt="screenshot" />
+        <div class="bubble pluto" style="margin-top:8px;padding:8px 12px;">Got your screen! What do you need help with?</div>
+        <div class="screen-prompt-row">
+          <input class="screen-prompt-input" id="screenPrompt" placeholder="e.g. solve this question..." />
+          <button class="screen-send" onclick="sendScreenMessage()">↑</button>
+        </div>
+      `
+      chat.appendChild(previewDiv)
+      chat.scrollTop = chat.scrollHeight
+      setTimeout(() => { const i=document.getElementById('screenPrompt'); if(i) i.focus() }, 100)
+    }
+
+    async function sendScreenMessage() {
+      const promptInput = document.getElementById('screenPrompt')
+      const userPrompt = promptInput ? promptInput.value.trim() : ''
+      if (!lastScreenshot) return
+      const question = userPrompt || 'What do you see? Help me with anything on this screen.'
+      const promptRow = document.querySelector('.screen-prompt-row')
+      if (promptRow) promptRow.remove()
+      const chat = document.getElementById('chat')
+      addBubble('user', question)
+      const typingBubble = document.createElement('div')
+      typingBubble.className = 'bubble pluto'
+      typingBubble.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>'
+      chat.appendChild(typingBubble)
+      chat.scrollTop = chat.scrollHeight
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json','Authorization':'Bearer '+GROQ_API_KEY },
+          body: JSON.stringify({
+            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+            max_tokens: 800,
+            messages: [
+              { role:'system', content:'You are Pluto, a smart helpful AI made by Sashank Viswanatham. The user shared their screen. Look carefully and help them concisely.' },
+              { role:'user', content:[{ type:'text',text:question },{ type:'image_url',image_url:{ url:lastScreenshot } }] }
+            ]
+          })
+        })
+        const data = await res.json()
+        if (data.choices&&data.choices[0]) {
+          const reply = data.choices[0].message.content
+          typingBubble.textContent = reply
+          if (autoSpeak) speakText(reply)
+        } else { typingBubble.textContent = 'Error: '+JSON.stringify(data) }
+      } catch(err) { typingBubble.textContent = 'Error: '+err.message }
+      lastScreenshot = null
+      chat.scrollTop = chat.scrollHeight
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key==='Enter'&&document.activeElement.id==='screenPrompt') sendScreenMessage()
+      if (e.key==='Enter'&&document.activeElement.id==='apiKeyInput') saveApiKey()
+    })
+
+    // --- File upload ---
+    function handleFile(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      attachedFile = file; attachedFileType = file.type
+      document.getElementById('filePreviewName').textContent = '📄 '+file.name
+      document.getElementById('filePreview').classList.add('show')
+      document.getElementById('fileInput').value = ''
+    }
+    function clearFile() {
+      attachedFile=null; attachedFileType=null
+      document.getElementById('filePreview').classList.remove('show')
+    }
+
+    // --- Voice ---
+    async function toggleRecording() { if(isRecording){stopRecording()}else{startRecording()} }
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true})
+        mediaRecorder = new MediaRecorder(stream)
+        audioChunks = []
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data)
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(audioChunks,{type:'audio/webm'})
+          await transcribeAudio(blob)
+          stream.getTracks().forEach(t=>t.stop())
+        }
+        mediaRecorder.start()
+        isRecording = true
+        document.getElementById('micBtn').classList.add('recording')
+        setVoiceStatus('🔴 Recording... tap to stop',true)
+      } catch(err) { setVoiceStatus('Microphone access denied') }
+    }
+    function stopRecording() {
+      if(mediaRecorder&&isRecording) {
+        mediaRecorder.stop(); isRecording=false
+        document.getElementById('micBtn').classList.remove('recording')
+        setVoiceStatus('Processing...',true)
+      }
+    }
+    async function transcribeAudio(blob) {
+      try {
+        const formData = new FormData()
+        formData.append('file',blob,'audio.webm')
+        formData.append('model','whisper-large-v3')
+        const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions',{
+          method:'POST',
+          headers:{'Authorization':'Bearer '+GROQ_API_KEY},
+          body:formData
+        })
+        const data = await res.json()
+        if(data.text) {
+          document.getElementById('userInput').value = data.text
+          setVoiceStatus('Got it!',true)
+          await sendMessage()
+        } else { setVoiceStatus('Could not hear — try again') }
+      } catch(err) { setVoiceStatus('Error: '+err.message) }
+    }
+    function speakText(text) {
+      if('speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+        const u = new SpeechSynthesisUtterance(text)
+        u.rate = 1.05
+        const voices = window.speechSynthesis.getVoices()
+        const v = voices.find(v=>v.name.includes('Samantha')||v.name.includes('Google US English'))
+        if(v) u.voice=v
+        window.speechSynthesis.speak(u)
+      }
+    }
+    function setVoiceStatus(msg,active=false) {
+      const el = document.getElementById('voiceStatus')
+      el.textContent=msg; el.classList.toggle('active',active)
+    }
+    function addBubble(type,text) {
+      const chat=document.getElementById('chat')
+      const b=document.createElement('div')
+      b.className='bubble '+type; b.textContent=text
+      chat.appendChild(b); chat.scrollTop=chat.scrollHeight
+    }
+
+    // --- Send message ---
+    async function sendMessage() {
+      const input = document.getElementById('userInput')
+      const msg = input.value.trim()
+      if(!msg&&!attachedFile) return
+      input.value=''
+      const chat = document.getElementById('chat')
+      const userBubble = document.createElement('div')
+      userBubble.className='bubble user'
+      if(attachedFile&&attachedFileType.startsWith('image/')) {
+        const reader=new FileReader()
+        reader.onload=e=>{
+          const img=document.createElement('img'); img.src=e.target.result
+          userBubble.appendChild(img)
+          if(msg){const t=document.createElement('div');t.style.marginTop='6px';t.textContent=msg;userBubble.appendChild(t)}
+        }
+        reader.readAsDataURL(attachedFile)
+      } else {
+        userBubble.textContent=attachedFile?'📄 '+attachedFile.name+(msg?'\n'+msg:''):msg
+      }
+      chat.appendChild(userBubble)
+      const typingBubble=document.createElement('div')
+      typingBubble.className='bubble pluto'
+      typingBubble.innerHTML='<div class="typing"><span></span><span></span><span></span></div>'
+      chat.appendChild(typingBubble)
+      chat.scrollTop=chat.scrollHeight
+      let userContent=msg||'Please help with this file.'
+      if(attachedFile&&attachedFileType.startsWith('image/')) {
+        const base64=await fileToBase64(attachedFile)
+        userContent=[{type:'text',text:msg||'What do you see?'},{type:'image_url',image_url:{url:base64}}]
+      } else if(attachedFile) {
+        const text=await attachedFile.text()
+        userContent=(msg?msg+'\n\n':'')+'File:\n'+text.slice(0,3000)
+      }
+      clearFile()
+      try {
+        const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+GROQ_API_KEY},
+          body:JSON.stringify({
+            model:'llama-3.3-70b-versatile',
+            max_tokens:500,
+            messages:[
+              {role:'system',content:'You are Pluto, a smart friendly AI assistant made by Sashank Viswanatham. Be concise and helpful.'},
+              {role:'user',content:userContent}
+            ]
+          })
+        })
+        const data=await res.json()
+        if(data.choices&&data.choices[0]) {
+          const reply=data.choices[0].message.content
+          typingBubble.textContent=reply
+          if(autoSpeak) speakText(reply)
+        } else { typingBubble.textContent='Error: '+JSON.stringify(data) }
+      } catch(err) { typingBubble.textContent='Error: '+err.message }
+      chat.scrollTop=chat.scrollHeight
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve,reject)=>{
+        const reader=new FileReader()
+        reader.onload=()=>resolve(reader.result)
+        reader.onerror=reject
+        reader.readAsDataURL(file)
+      })
+    }
+
+    document.getElementById('userInput').addEventListener('keydown',e=>{
+      if(e.key==='Enter') sendMessage()
+    })
+
+    window.speechSynthesis.onvoiceschanged=()=>{}
+  </script>
+
+</body>
+</html>
